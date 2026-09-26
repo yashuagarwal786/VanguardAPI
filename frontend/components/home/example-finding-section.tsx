@@ -44,7 +44,7 @@ export default function ExampleFindingSection() {
                 <div className="w-2.5 h-2.5 rounded-full bg-warn-amber" />
                 <div className="w-2.5 h-2.5 rounded-full bg-terminal" />
               </div>
-              <span className="text-muted-body text-[11px] ml-2">vangaurd@security-advisory:~/BOLA-2026-001</span>
+              <span className="text-muted-body text-[11px] ml-2">vanguard@security-advisory:~/BOLA-2026-001</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-alert-red/20 text-red-200 border border-alert-red/40">

@@ -42,7 +42,7 @@ export default function NotFound() {
               <div className="w-2.5 h-2.5 rounded-full bg-warn-amber" />
               <div className="w-2.5 h-2.5 rounded-full bg-terminal" />
             </div>
-            <span className="text-[11px] text-muted-body ml-2">vangaurd@router:~</span>
+            <span className="text-[11px] text-muted-body ml-2">vanguard@router:~</span>
           </div>
           <span className="text-[10px] text-alert-red font-bold">STATUS 404</span>
         </div>
@@ -58,14 +58,14 @@ export default function NotFound() {
               <span className="terminal-cursor bg-alert-red" />
             </h1>
             <p className="text-xs text-muted-body leading-relaxed">
-              &gt; The requested URI path does not match any valid endpoint template in the SentinelAPI OpenAPI contract schema.
+              &gt; The requested URI path does not match any valid endpoint template in the VanguardAPI OpenAPI contract schema.
             </p>
           </div>
 
           <div className="p-4 rounded-lg bg-black/60 border border-white/10 text-xs text-muted-dim space-y-1">
-            <div><span className="text-terminal">$</span> curl -I https://vangaurd-api.io/path</div>
+            <div><span className="text-terminal">$</span> curl -I https://vanguard-api.io/path</div>
             <div className="text-alert-red">HTTP/2 404 Not Found</div>
-            <div>server: vangaurd-edge-proxy</div>
+            <div>server: vanguard-edge-proxy</div>
           </div>
 
           <Link

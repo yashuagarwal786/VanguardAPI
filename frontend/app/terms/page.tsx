@@ -5,7 +5,7 @@ import { siteConfig } from '@/site.config';
 
 export const metadata: Metadata = {
   title: 'Terms of Service',
-  description: 'Terms and conditions governing the use of VANGAURD-API zero-trust vulnerability scanner.',
+  description: 'Terms and conditions governing the use of VanguardAPI zero-trust vulnerability scanner.',
 };
 
 export default function TermsPage() {

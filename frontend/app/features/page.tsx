@@ -29,7 +29,7 @@ export default function FeaturesPage() {
       title: 'Dual-User BOLA / IDOR Verification',
       tag: 'OWASP API1:2023',
       description:
-        'Eliminates the false-positive epidemic of single-tenant scanners. VANGAURD-API logs into two distinct accounts (User A and User B) simultaneously and tests whether User A can read or mutate User B’s private records.',
+        'Eliminates the false-positive epidemic of single-tenant scanners. VanguardAPI logs into two distinct accounts (User A and User B) simultaneously and tests whether User A can read or mutate User B’s private records.',
     },
     {
       icon: CreditCard,
@@ -100,7 +100,7 @@ export default function FeaturesPage() {
           Engineered for zero-trust authorization audits.
         </h1>
         <p className="text-lg text-muted-body leading-relaxed">
-          Traditional scanners look for SQL injection and XSS on static HTML forms. VANGAURD-API specializes exclusively in the modern API attack surface: broken ownership checks and data exfiltration.
+          Traditional scanners look for SQL injection and XSS on static HTML forms. VanguardAPI specializes exclusively in the modern API attack surface: broken ownership checks and data exfiltration.
         </p>
       </motion.div>
 
@@ -167,7 +167,7 @@ export default function FeaturesPage() {
           Experience zero-trust API scanning today.
         </h3>
         <p className="text-muted-body max-w-xl mx-auto mb-8 text-sm sm:text-base">
-          VANGAURD-API requires domain verification before scanning, ensuring all audits remain ethical and controlled.
+          VanguardAPI requires domain verification before scanning, ensuring all audits remain ethical and controlled.
         </p>
         <Link
           href="/dashboard"

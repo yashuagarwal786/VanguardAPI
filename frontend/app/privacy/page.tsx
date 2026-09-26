@@ -5,7 +5,7 @@ import { siteConfig } from '@/site.config';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy',
-  description: 'VANGAURD-API privacy policy detailing zero-tracking data handling and target security.',
+  description: 'VanguardAPI privacy policy detailing zero-tracking data handling and target security.',
 };
 
 export default function PrivacyPage() {

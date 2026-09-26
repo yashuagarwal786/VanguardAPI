@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
 
     if (groqKey || openaiKey) {
       try {
-        const systemPrompt = `You are SentinelBot, an elite SOC Cybersecurity AI Copilot for the SentinelAPI zero-trust vulnerability scanning platform.
+        const systemPrompt = `You are VanguardBot, an elite SOC Cybersecurity AI Copilot for the VanguardAPI zero-trust vulnerability scanning platform.
 Context:
 - Target Name: ${targetName}
 - Target Base URL: ${baseUrl}
@@ -101,7 +101,7 @@ Instructions:
 
     if (lowerMsg.includes('bola') || lowerMsg.includes('idor') || lowerMsg.includes('object level')) {
       const bolaFinding = findings.find((f) => f.title?.toLowerCase().includes('bola') || f.findingCode?.includes('BOLA'));
-      reply = `### [SENTINEL-SOC] Broken Object Level Authorization (BOLA / IDOR) Analysis
+      reply = `### [VANGUARD-SOC] Broken Object Level Authorization (BOLA / IDOR) Analysis
 
 **Context for ${targetName}:**
 ${bolaFinding ? `A BOLA candidate was flagged at \`${bolaFinding.endpoint}\`.` : `No direct BOLA flaw flagged on ${baseUrl}, but entity reference IDs must always be validated.`}
@@ -137,7 +137,7 @@ curl -i -X GET "${baseUrl}/orders/2" -H "Authorization: Bearer <USER_A_TOKEN>"
 # Expected Response: HTTP 404 Not Found or HTTP 403 Forbidden
 \`\`\``;
     } else if (lowerMsg.includes('hsts') || lowerMsg.includes('header') || lowerMsg.includes('nosniff') || lowerMsg.includes('security header')) {
-      reply = `### [SENTINEL-SOC] Security Headers Hardening Guide
+      reply = `### [VANGUARD-SOC] Security Headers Hardening Guide
 
 **Target Analyzed:** \`${baseUrl}\`
 
@@ -177,7 +177,7 @@ app.use(helmet({
 curl -I "${baseUrl}" | grep -Ei "(strict-transport|x-content-type|x-frame)"
 \`\`\``;
     } else if (lowerMsg.includes('rate limit') || lowerMsg.includes('throttle') || lowerMsg.includes('429') || lowerMsg.includes('burst')) {
-      reply = `### [SENTINEL-SOC] Rate Limiting & DoS Mitigation Architecture
+      reply = `### [VANGUARD-SOC] Rate Limiting & DoS Mitigation Architecture
 
 **Target:** \`${baseUrl}\`
 
@@ -206,7 +206,7 @@ seq 1 15 | xargs -n1 -P10 curl -s -o /dev/null -w "%{http_code}\\n" "${baseUrl}"
 \`\`\``;
     } else if (lowerMsg.includes('curl') || lowerMsg.includes('poc') || lowerMsg.includes('test') || lowerMsg.includes('reproduce')) {
       if (findings.length > 0) {
-        reply = `### [SENTINEL-SOC] Active Proof-of-Concept Curl Tests
+        reply = `### [VANGUARD-SOC] Active Proof-of-Concept Curl Tests
 
 Here are the reproducible PoC commands derived from your latest audit findings on **${targetName}**:
 
@@ -220,7 +220,7 @@ ${f.reproduction || `curl -i "${f.endpoint || baseUrl}"`}
   )
   .join('\n\n')}`;
       } else {
-        reply = `### [SENTINEL-SOC] Diagnostic Curl Probes for ${baseUrl}
+        reply = `### [VANGUARD-SOC] Diagnostic Curl Probes for ${baseUrl}
 
 Run these commands to verify endpoint availability and response headers:
 \`\`\`bash
@@ -241,7 +241,7 @@ curl -I -X OPTIONS "${baseUrl}" \\
       const med = findings.filter((f) => f.severity === 'Medium').length;
       const low = findings.filter((f) => f.severity === 'Low').length;
 
-      reply = `### [SENTINEL-SOC] Executive Security Assessment Summary
+      reply = `### [VANGUARD-SOC] Executive Security Assessment Summary
 
 - **Target System:** \`${targetName}\` (\`${baseUrl}\`)
 - **Audit Status:** ${totalFindings > 0 ? '⚠️ Action Required' : '✅ Compliant'}
@@ -258,7 +258,7 @@ curl -I -X OPTIONS "${baseUrl}" \\
 
 *Need specific code patches? Ask me for FastAPI, Express, or Nginx implementations.*`;
     } else {
-      reply = `### [SENTINEL-SOC] Operational Telemetry Ready
+      reply = `### [VANGUARD-SOC] Operational Telemetry Ready
 
 I am linked to **${targetName}** (\`${baseUrl}\`) with **${totalFindings} audit finding(s)** in scope.
 
@@ -271,7 +271,7 @@ I am linked to **${targetName}** (\`${baseUrl}\`) with **${totalFindings} audit 
 What security domain would you like to investigate?`;
     }
 
-    return NextResponse.json({ reply, source: 'sentinel-soc-core' });
+    return NextResponse.json({ reply, source: 'vanguard-soc-core' });
   } catch (err: unknown) {
     console.error('Chat API Error:', err);
     return NextResponse.json(

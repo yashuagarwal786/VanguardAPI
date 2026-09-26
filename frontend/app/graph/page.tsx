@@ -288,7 +288,7 @@ export default function ThreatGraphPage() {
             <Info className="w-4 h-4 text-lime-400" /> 5-Tier Hierarchical Topology Architecture
           </h3>
           <p className="text-xs text-zinc-400 mb-5 leading-relaxed">
-            VANGAURD-API structures authorization boundaries into five deterministic topological tiers. Probes systematically traverse these tiers to detect broken boundaries and identify cross-tenant data leaks.
+            VanguardAPI structures authorization boundaries into five deterministic topological tiers. Probes systematically traverse these tiers to detect broken boundaries and identify cross-tenant data leaks.
           </p>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 text-xs">
             <div className="rounded-xl border border-sky-500/20 bg-sky-950/15 p-3.5">

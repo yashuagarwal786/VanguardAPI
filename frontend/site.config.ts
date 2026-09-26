@@ -1,5 +1,5 @@
 /**
- * SentinelAPI — Global Site Configuration
+ * VanguardAPI — Global Site Configuration
  * Single source of truth for all brand, contact, social, and feature flags.
  * No value is hardcoded twice across the codebase.
  */
@@ -39,21 +39,21 @@ export interface SiteConfig {
 }
 
 export const siteConfig: SiteConfig = {
-  name: 'VANGAURD-API',
-  legalName: 'VANGAURD-API Technologies Inc.',
+  name: 'VanguardAPI',
+  legalName: 'VanguardAPI Technologies Inc.',
   tagline: 'Find the API vulnerability before the breach headline does.',
   description:
     'Production-grade, zero-trust API security platform. Discover Broken Object Level Authorization (BOLA), unmasked credential leaks, and missing rate limits from your OpenAPI contracts before attackers do.',
-  url: process.env.NEXT_PUBLIC_SITE_URL || 'https://vangaurd-api.io',
+  url: process.env.NEXT_PUBLIC_SITE_URL || 'https://vanguard-api.io',
   links: {
-    github: 'https://github.com/vangaurd-api/vangaurd-api',
-    twitter: 'https://twitter.com/vangaurd_api',
-    discord: 'https://discord.gg/vangaurd-api',
+    github: 'https://github.com/vanguard-api/vanguard-api',
+    twitter: 'https://twitter.com/vanguard_api',
+    discord: 'https://discord.gg/vanguard-api',
     docs: '/docs',
   },
   contact: {
-    email: 'hello@vangaurd-api.io',
-    securityEmail: 'security@vangaurd-api.io',
+    email: 'hello@vanguard-api.io',
+    securityEmail: 'security@vanguard-api.io',
   },
   navigation: [
     { label: 'Features', href: '/features' },
@@ -74,17 +74,17 @@ export const siteConfig: SiteConfig = {
       { label: 'Getting Started Guide', href: '/docs' },
       { label: 'OpenAPI Spec Format', href: '/docs#openapi' },
       { label: 'Verification Protocol', href: '/docs#verification' },
-      { label: 'GitHub Repository', href: 'https://github.com/vangaurd-api/vangaurd-api', external: true },
+      { label: 'GitHub Repository', href: 'https://github.com/vanguard-api/vanguard-api', external: true },
     ],
     legal: [
       { label: 'Privacy Policy', href: '/privacy' },
       { label: 'Terms of Service', href: '/terms' },
       { label: 'Acceptable Use Policy', href: '/acceptable-use' },
-      { label: 'Security Disclosures', href: 'mailto:security@vangaurd-api.io' },
+      { label: 'Security Disclosures', href: 'mailto:security@vanguard-api.io' },
     ],
   },
   beta: {
     isPublicBeta: true,
-    bannerText: 'VANGAURD-API is currently in Free Public Beta for authorized engineering teams.',
+    bannerText: 'VanguardAPI is currently in Free Public Beta for authorized engineering teams.',
   },
 };

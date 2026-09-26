@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(body, { status: response.status });
   } catch (err: unknown) {
     return NextResponse.json(
-      { error: err instanceof Error && err.name === 'TimeoutError' ? 'SentinelAPI backend request timed out' : err instanceof Error ? err.message : 'SentinelAPI backend is unavailable' },
+      { error: err instanceof Error && err.name === 'TimeoutError' ? 'VanguardAPI backend request timed out' : err instanceof Error ? err.message : 'VanguardAPI backend is unavailable' },
       { status: err instanceof Error && err.name === 'TimeoutError' ? 504 : 503 }
     );
   }

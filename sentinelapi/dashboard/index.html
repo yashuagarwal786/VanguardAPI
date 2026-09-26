@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VANGAURD-API — Zero-Trust API Vulnerability Dashboard</title>
+  <title>VanguardAPI — Zero-Trust API Vulnerability Dashboard</title>
   <style>
     :root {
       --bg-primary: #0a0a0b;
@@ -983,7 +983,7 @@
       <div class="brand">
         <div class="brand-icon">🛡️</div>
         <div>
-          <h1>VANGAURD-API</h1>
+          <h1>VanguardAPI</h1>
           <p>Zero-Trust API Vulnerability Scanner • Executive & Technical Report</p>
         </div>
       </div>
@@ -1782,7 +1782,7 @@
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `vangaurd-api-findings-${new Date().toISOString().slice(0, 10)}.json`;
+        a.download = `vanguard-api-findings-${new Date().toISOString().slice(0, 10)}.json`;
         a.click();
         URL.revokeObjectURL(url);
       });
@@ -1879,7 +1879,7 @@
             renderDashboard();
             showToast(`Loaded ${file.name} successfully`);
           } else {
-            alert('Invalid JSON structure: Expected VANGAURD-API report or history format.');
+            alert('Invalid JSON structure: Expected VanguardAPI report or history format.');
           }
         } catch (err) {
           alert('Error parsing JSON file: ' + err.message);
@@ -1924,7 +1924,7 @@
         if (scan.findings && scan.findings.length > 0) {
           reportData = {
             scan_metadata: {
-              scanner: 'VANGAURD-API v1.0.0',
+              scanner: 'VanguardAPI v1.0.0',
               target_base_url: scan.target_base_url,
               target_spec_title: scan.target_spec_title,
               timestamp: scan.timestamp,

@@ -12,7 +12,7 @@ export default function HowItWorksSection() {
       codeName: '01 INGEST SPEC',
       progress: '100%',
       description:
-        'VANGAURD-API parses your OpenAPI 3.0 contract, automatically mapping route templates, parameterized path identifiers, and security requirements.',
+        'VanguardAPI parses your OpenAPI 3.0 contract, automatically mapping route templates, parameterized path identifiers, and security requirements.',
     },
     {
       num: '02',

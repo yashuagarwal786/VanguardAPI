@@ -32,7 +32,7 @@ export default function ProblemSection() {
                 <div className="w-2.5 h-2.5 rounded-full bg-warn-amber" />
                 <div className="w-2.5 h-2.5 rounded-full bg-terminal" />
               </div>
-              <span className="text-muted-body text-[11px] ml-2">vangaurd@identity-lane-inspection:~</span>
+              <span className="text-muted-body text-[11px] ml-2">vanguard@identity-lane-inspection:~</span>
             </div>
             <div className="flex items-center gap-3">
               <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-alert-red/20 text-alert-red border border-alert-red/30">

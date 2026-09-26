@@ -65,7 +65,7 @@ export default function SocBotModal({ target, findings }: SocBotModalProps) {
         {
           id: 'welcome-1',
           role: 'assistant',
-          content: `### 🛡️ [VANGAURD-SOC] AI Security Copilot Initialized
+          content: `### 🛡️ [VANGUARD-SOC] AI Security Copilot Initialized
 
 **Target Linked:** \`${targetName}\` (${target?.baseUrl || 'No base URL'})
 **Telemetry Status:** **${findingsCount} vulnerability finding(s)** synchronized in context.
@@ -191,7 +191,7 @@ I can explain any flagged flaw, write code patches (FastAPI, Express, Nginx), or
           </span>
 
           <span className="text-acid group-hover:text-white transition-colors">
-            VANGAURD-API SOC BOT
+            VANGUARD-API SOC BOT
           </span>
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-acid/20 text-acid border border-acid/30">
             AI COPILOT
@@ -222,7 +222,7 @@ I can explain any flagged flaw, write code patches (FastAPI, Express, Nginx), or
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-mono font-bold text-white uppercase tracking-wider">
-                      VANGAURD-API SOC COPILOT
+                      VANGUARD-API SOC COPILOT
                     </span>
                     <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-acid/20 text-acid font-bold">
                       ACTIVE

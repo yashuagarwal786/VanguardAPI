@@ -31,10 +31,10 @@ export async function POST(request: NextRequest) {
     // 3. HTTP /.well-known verification file check
     else if (verificationMethod === 'well_known') {
       try {
-        const verifyUrl = new URL('/.well-known/sentinelapi-verify.txt', baseUrl).toString();
+        const verifyUrl = new URL('/.well-known/vanguardapi-verify.txt', baseUrl).toString();
         const res = await fetch(verifyUrl, {
           signal: AbortSignal.timeout(6000),
-          headers: { 'User-Agent': 'SentinelAPI-Domain-Verifier/1.0' },
+          headers: { 'User-Agent': 'VanguardAPI-Domain-Verifier/1.0' },
         });
 
         if (res.ok) {

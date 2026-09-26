@@ -80,7 +80,7 @@ export default function ThreatCardsSection() {
         </h2>
 
         <p className="text-base sm:text-lg text-muted-body max-w-2xl mb-12 font-mono text-sm">
-          Generic DAST tools report hundreds of false positives on public pages. VANGAURD-API audits authorization context directly using dual authenticated sessions.
+          Generic DAST tools report hundreds of false positives on public pages. VanguardAPI audits authorization context directly using dual authenticated sessions.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

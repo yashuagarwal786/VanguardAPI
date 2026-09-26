@@ -20,7 +20,7 @@ const defaultScanId = 'scan-vanguard-baseline';
 
 const defaultTarget: Target = {
   id: defaultTargetId,
-  name: 'VANGAURD-API Vulnerable Sandbox',
+  name: 'VanguardAPI Vulnerable Sandbox',
   baseUrl: 'http://127.0.0.1:4000',
   openApiUrl: 'http://127.0.0.1:4000/openapi.json',
   sandboxMode: true,

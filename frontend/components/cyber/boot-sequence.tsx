@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowRight } from 'lucide-react';
 
 const BOOT_LINES = [
-  'initializing vangaurd-api core v3.2.0...',
+  'initializing vanguard-api core v3.2.0...',
   'mounting zero-trust authorization pipeline...',
   'ingesting openapi 3.0 contract parser...',
   'threat map active. telemetry calibrated.',
@@ -17,7 +17,7 @@ export default function BootSequence({ onComplete }: { onComplete: () => void })
   useEffect(() => {
     // 1. Accessibility: check prefers-reduced-motion
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const hasBooted = sessionStorage.getItem('sentinel_boot_completed');
+    const hasBooted = sessionStorage.getItem('vanguard_boot_completed');
 
     // 2. Performance: check Save-Data or slow connection
     // @ts-expect-error navigator.connection may be undefined in standard TS
@@ -37,7 +37,7 @@ export default function BootSequence({ onComplete }: { onComplete: () => void })
         if (prev + 1 >= BOOT_LINES.length) {
           clearInterval(interval);
           setTimeout(() => {
-            sessionStorage.setItem('sentinel_boot_completed', 'true');
+            sessionStorage.setItem('vanguard_boot_completed', 'true');
             setVisible(false);
             onComplete();
           }, 180);
@@ -49,7 +49,7 @@ export default function BootSequence({ onComplete }: { onComplete: () => void })
 
     const handleSkip = () => {
       clearInterval(interval);
-      sessionStorage.setItem('sentinel_boot_completed', 'true');
+      sessionStorage.setItem('vanguard_boot_completed', 'true');
       setVisible(false);
       onComplete();
     };
@@ -67,7 +67,7 @@ export default function BootSequence({ onComplete }: { onComplete: () => void })
   return (
     <div
       onClick={() => {
-        sessionStorage.setItem('sentinel_boot_completed', 'true');
+        sessionStorage.setItem('vanguard_boot_completed', 'true');
         setVisible(false);
         onComplete();
       }}
@@ -88,12 +88,12 @@ export default function BootSequence({ onComplete }: { onComplete: () => void })
               <div className="w-2.5 h-2.5 rounded-full bg-warn-amber/80" />
               <div className="w-2.5 h-2.5 rounded-full bg-terminal/80" />
             </div>
-            <span className="text-[11px] text-muted-body ml-2">vangaurd@soc-terminal:~</span>
+            <span className="text-[11px] text-muted-body ml-2">vanguard@soc-terminal:~</span>
           </div>
           <button
             type="button"
             onClick={() => {
-              sessionStorage.setItem('sentinel_boot_completed', 'true');
+              sessionStorage.setItem('vanguard_boot_completed', 'true');
               setVisible(false);
               onComplete();
             }}
@@ -119,7 +119,7 @@ export default function BootSequence({ onComplete }: { onComplete: () => void })
 
         {/* Telemetry footer */}
         <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-[10px] text-muted-dim">
-          <span className="text-terminal font-bold">VANGAURD-API SOC V3.2</span>
+          <span className="text-terminal font-bold">VANGUARD-API SOC V3.2</span>
           <span>BOOT SEQUENCE (&lt;1s)</span>
         </div>
       </div>
