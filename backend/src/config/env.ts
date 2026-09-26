@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 const envSchema = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(5000),
-  HOST: z.string().default('127.0.0.1'),
+  HOST: z.string().default('0.0.0.0'),
   DATABASE_PATH: z.string().default('./data/sentinel.sqlite'),
   AUTHORIZED_TARGET_HOSTS: z.string().default(''),
   PUBLIC_DEMO_MODE: z.string().default('false'),
