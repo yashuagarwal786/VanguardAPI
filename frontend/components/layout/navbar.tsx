@@ -124,10 +124,6 @@ export default function Navbar() {
                 <span>Sign Out</span>
               </button>
             </div>
-          ) : !authAvailable ? (
-            <Link href="/dashboard" className="inline-flex items-center gap-2 rounded-lg bg-acid px-4 py-2 text-xs font-bold text-obsidian hover:bg-acid-hover">
-              <LayoutDashboard className="h-3.5 w-3.5" /> Launch Demo
-            </Link>
           ) : (
             <div className="flex items-center gap-3">
               <Link

@@ -50,7 +50,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [authAvailable]);
 
   const openAuthModal = (mode: 'login' | 'signup' = 'login') => {
-    if (!authAvailable) return;
     setModalMode(mode);
     setIsModalOpen(true);
   };
