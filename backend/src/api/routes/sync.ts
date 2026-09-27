@@ -70,3 +70,44 @@ syncRouter.post('/:targetId/disable', (req, res) => {
   const config = disableMonitoring(req.params.targetId);
   return res.json({ message: 'Monitoring disabled', config });
 });
+
+// POST /api/sync/:targetId/run-now & POST /api/sync/:targetId/start aliases
+syncRouter.post('/:targetId/run-now', async (req, res) => {
+  const target = store.getTarget(req.params.targetId);
+  if (!target) return res.status(404).json({ error: 'Target not found' });
+  void runSync(req.params.targetId).catch((e: unknown) => {
+    console.error(JSON.stringify({ event: 'run_now_error', targetId: req.params.targetId, error: e instanceof Error ? e.message : 'unknown' }));
+  });
+  return res.status(202).json({ message: 'Sync started', statusUrl: `/api/sync/${req.params.targetId}/status` });
+});
+
+syncRouter.post('/:targetId/start', async (req, res) => {
+  const target = store.getTarget(req.params.targetId);
+  if (!target) return res.status(404).json({ error: 'Target not found' });
+  void runSync(req.params.targetId).catch((e: unknown) => {
+    console.error(JSON.stringify({ event: 'start_error', targetId: req.params.targetId, error: e instanceof Error ? e.message : 'unknown' }));
+  });
+  return res.status(202).json({ message: 'Sync started', statusUrl: `/api/sync/${req.params.targetId}/status` });
+});
+
+// POST /api/sync/:targetId/simulate-benchmark — Controlled Benchmark Simulation
+syncRouter.post('/:targetId/simulate-benchmark', async (req, res) => {
+  const target = store.getTarget(req.params.targetId);
+  if (!target) return res.status(404).json({ error: 'Target not found' });
+  if (!target.sandboxMode && !target.demoSandbox) {
+    return res.status(403).json({ error: 'Controlled benchmark simulation is only allowed on sandbox targets' });
+  }
+
+  try {
+    const syncRecord = await runSync(req.params.targetId, { simulationMode: true });
+    syncRecord.simulationMode = true;
+    store.updateSyncRecord(syncRecord);
+    return res.status(200).json({
+      message: 'CONTROLLED BENCHMARK SIMULATION completed',
+      sync: syncRecord,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error instanceof Error ? error.message : 'Simulation failed' });
+  }
+});
+

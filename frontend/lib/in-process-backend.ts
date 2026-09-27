@@ -1038,4 +1038,147 @@ export const inProcessBackend = {
     }
     return config;
   },
+
+  async simulateBenchmarkSync(targetId: string): Promise<{ message: string; sync: SyncRecord }> {
+    const target = this.getTarget(targetId);
+    if (!target) throw new Error('Target not found');
+
+    const syncId = randomUUID();
+    const startedAt = new Date().toISOString();
+    const completedAt = new Date().toISOString();
+
+    const syncRecord: SyncRecord = {
+      id: syncId,
+      targetId,
+      startedAt,
+      completedAt,
+      status: 'COMPLETED',
+      previousScanId: defaultScanId,
+      currentScanId: defaultScanId,
+      simulationMode: true,
+      newFindingCount: 1,
+      resolvedFindingCount: 0,
+      unchangedFindingCount: 2,
+      regressedFindingCount: 0,
+      driftDetected: true,
+      endpointDiff: {
+        added: [
+          {
+            id: 'GET /admin/audit-logs',
+            method: 'GET',
+            path: '/admin/audit-logs',
+            authRequired: true,
+            parameterNames: ['query:limit'],
+            securitySchemes: ['Bearer'],
+          },
+        ],
+        removed: [],
+        modified: [
+          {
+            previous: {
+              id: 'GET /orders/{id}',
+              method: 'GET',
+              path: '/orders/{id}',
+              authRequired: true,
+              parameterNames: ['path:id'],
+              securitySchemes: ['Bearer'],
+            },
+            current: {
+              id: 'GET /orders/{id}',
+              method: 'GET',
+              path: '/orders/{id}',
+              authRequired: true,
+              parameterNames: ['path:id'],
+              securitySchemes: ['Bearer'],
+            },
+            reason: 'authorization boundary relaxed: object tenant isolation disabled',
+          },
+        ],
+        unchanged: [
+          {
+            id: 'PUT /admin/users/{id}/role',
+            method: 'PUT',
+            path: '/admin/users/{id}/role',
+            authRequired: true,
+            parameterNames: ['path:id'],
+            securitySchemes: ['Bearer'],
+          },
+        ],
+      },
+      findingComparisons: [
+        {
+          fingerprint: 'BOLA::GET::/orders/{id}::card_number+cvv',
+          findingId: 'f-bola-orders',
+          status: 'UNCHANGED',
+          title: 'Broken Object Level Authorization (BOLA) in GET /orders/{id}',
+          severity: 'critical',
+          vulnerabilityType: 'BOLA',
+        },
+        {
+          fingerprint: 'BFLA::PUT::/admin/users/{id}/role::admin_governance',
+          findingId: 'f-bfla-role',
+          status: 'UNCHANGED',
+          title: 'Broken Function Level Authorization (BFLA) in PUT /admin/users/{id}/role',
+          severity: 'critical',
+          vulnerabilityType: 'BFLA',
+        },
+        {
+          fingerprint: 'BFLA::GET::/admin/audit-logs::audit_records',
+          findingId: randomUUID(),
+          status: 'NEW',
+          title: 'Broken Function Level Authorization (BFLA) on newly introduced GET /admin/audit-logs',
+          severity: 'high',
+          vulnerabilityType: 'BFLA',
+        },
+      ],
+      driftEvents: [
+        {
+          endpoint: 'GET /admin/audit-logs',
+          previousBehavior: 'endpoint did not exist in API baseline',
+          currentBehavior: 'new administrative endpoint deployed without role verification',
+          driftType: 'ENDPOINT_ADDED',
+          evidence: 'Spec diff confirmed 1 added endpoint; GET /admin/audit-logs accessible by standard customer token',
+        },
+        {
+          endpoint: 'GET /orders/{id}',
+          previousBehavior: 'tenant isolation enforced on secondary orders',
+          currentBehavior: 'UNAUTHORIZED ACCESS succeeds for foreign tenant order records',
+          driftType: 'AUTHORIZATION',
+          evidence: 'Probe returned HTTP 200 with victim order payload instead of HTTP 403',
+        },
+      ],
+      attackPathDiff: {
+        newlyReachableResources: ['admin_audit_vault', 'payment_gateway_logs'],
+        disappearedAttackPaths: [],
+        changedAttackPaths: [
+          {
+            id: 'path-bola-1',
+            entryPoint: 'GET /orders/{id}',
+            previousDepth: 3,
+            currentDepth: 4,
+            newSteps: ['Pivot to downstream audit vault record #101'],
+          },
+        ],
+        newlyExposedSensitiveData: ['session_token', 'billing_audit_meta'],
+      },
+      impactDiff: {
+        newlyDirectlyExposed: ['audit_logs'],
+        newlyIndirectlyReachable: ['payment_gateway_logs'],
+        newlyExposedSensitiveFields: ['session_token', 'audit_hash'],
+        newlyAffectedIdentities: ['security_auditor'],
+      },
+      llmExplanation: 'CONTROLLED BENCHMARK SIMULATION: Detected authorization boundary regression on GET /orders/{id} and deployment of unprotected administrative endpoint GET /admin/audit-logs. Attacker can traverse into audit vault records without administrative privileges. Recommended remediation: implement strict RBAC checks before routing.',
+    };
+
+    syncRecordsMap.set(syncId, syncRecord);
+
+    const mon = monitoringConfigsMap.get(targetId);
+    if (mon) {
+      mon.lastSyncAt = completedAt;
+      mon.nextSyncAt = new Date(Date.now() + mon.syncIntervalHours * 3600000).toISOString();
+      mon.updatedAt = completedAt;
+    }
+
+    return { message: 'CONTROLLED BENCHMARK SIMULATION completed', sync: syncRecord };
+  },
 };

@@ -37,3 +37,16 @@ export async function disableMonitoring(targetId: string): Promise<{ message: st
     method: 'POST',
   });
 }
+
+export async function triggerSyncNow(targetId: string): Promise<{ message: string; statusUrl: string }> {
+  return api<{ message: string; statusUrl: string }>(`/sync/${encodeURIComponent(targetId)}/run-now`, {
+    method: 'POST',
+  });
+}
+
+export async function simulateBenchmarkSync(targetId: string): Promise<{ message: string; sync: SyncRecord }> {
+  return api<{ message: string; sync: SyncRecord }>(`/sync/${encodeURIComponent(targetId)}/simulate-benchmark`, {
+    method: 'POST',
+  });
+}
+

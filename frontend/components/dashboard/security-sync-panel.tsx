@@ -14,7 +14,12 @@ import {
   Sliders,
   History,
   Activity,
-  Zap
+  Zap,
+  Sparkles,
+  Route,
+  Network,
+  X,
+  ExternalLink
 } from 'lucide-react';
 import type { Target, SyncRecord, MonitoringConfig } from '@/lib/api/types';
 import { 
@@ -22,7 +27,8 @@ import {
   triggerSync, 
   enableMonitoring, 
   disableMonitoring, 
-  getSyncHistory 
+  getSyncHistory,
+  simulateBenchmarkSync
 } from '@/lib/api/sync';
 
 interface SecuritySyncPanelProps {
@@ -37,8 +43,10 @@ export function SecuritySyncPanel({ targets, onSyncComplete }: SecuritySyncPanel
   const [history, setHistory] = useState<SyncRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [simulating, setSimulating] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'drift' | 'history'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'drift' | 'attack-paths' | 'history'>('overview');
+  const [inspectSyncRecord, setInspectSyncRecord] = useState<SyncRecord | null>(null);
 
   // Select first target by default
   useEffect(() => {
@@ -54,7 +62,7 @@ export function SecuritySyncPanel({ targets, onSyncComplete }: SecuritySyncPanel
     try {
       const [statusRes, historyRes] = await Promise.all([
         getSyncStatus(targetId).catch(() => null),
-        getSyncHistory(targetId, 10).catch(() => ({ targetId, history: [] })),
+        getSyncHistory(targetId, 15).catch(() => ({ targetId, history: [] })),
       ]);
 
       if (statusRes) {
@@ -82,7 +90,7 @@ export function SecuritySyncPanel({ targets, onSyncComplete }: SecuritySyncPanel
     setSyncing(true);
     setStatusMessage('Initiating continuous authorization sync...');
     try {
-      const res = await triggerSync(selectedTargetId);
+      await triggerSync(selectedTargetId);
       setStatusMessage('Sync in progress: fetching OpenAPI spec & probing authorization baseline...');
       
       // Poll for completion
@@ -114,6 +122,23 @@ export function SecuritySyncPanel({ targets, onSyncComplete }: SecuritySyncPanel
     }
   };
 
+  const handleSimulateBenchmark = async () => {
+    if (!selectedTargetId || simulating) return;
+    setSimulating(true);
+    setStatusMessage('Running controlled benchmark simulation with live pipeline...');
+    try {
+      const res = await simulateBenchmarkSync(selectedTargetId);
+      setLatestSync(res.sync);
+      setStatusMessage('CONTROLLED BENCHMARK SIMULATION completed: verified actual authorization drift.');
+      void fetchSyncData(selectedTargetId);
+      onSyncComplete?.();
+    } catch (err) {
+      setStatusMessage(err instanceof Error ? err.message : 'Benchmark simulation failed');
+    } finally {
+      setSimulating(false);
+    }
+  };
+
   const handleToggleMonitoring = async () => {
     if (!selectedTargetId) return;
     try {
@@ -142,10 +167,10 @@ export function SecuritySyncPanel({ targets, onSyncComplete }: SecuritySyncPanel
     return `${hours}h ${mins}m`;
   };
 
-  const currentTarget = targets.find((t) => t.id === selectedTargetId);
   const diff = latestSync?.endpointDiff;
   const comparisons = latestSync?.findingComparisons ?? [];
   const driftEvents = latestSync?.driftEvents ?? [];
+  const attackPathDiff = latestSync?.attackPathDiff;
 
   return (
     <div className="rounded-2xl border border-white/10 bg-[#111113]/90 backdrop-blur-md p-6 shadow-2xl">
@@ -162,6 +187,11 @@ export function SecuritySyncPanel({ targets, onSyncComplete }: SecuritySyncPanel
                 <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-lime-400/10 text-lime-300 border border-lime-400/30">
                   Continuous Authorization Drift
                 </span>
+                {latestSync?.simulationMode && (
+                  <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-amber-400/15 text-amber-300 border border-amber-400/30">
+                    Benchmark Simulation
+                  </span>
+                )}
               </div>
               <p className="text-xs text-zinc-400 mt-0.5">
                 Periodic baseline synchronization, API surface diffing, and authorization regression tracking.
@@ -171,7 +201,7 @@ export function SecuritySyncPanel({ targets, onSyncComplete }: SecuritySyncPanel
         </div>
 
         {/* Target Selector & Actions */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
           {targets.length > 1 && (
             <select
               value={selectedTargetId}
@@ -199,7 +229,17 @@ export function SecuritySyncPanel({ targets, onSyncComplete }: SecuritySyncPanel
           </button>
 
           <button
-            disabled={syncing || !selectedTargetId}
+            disabled={simulating || syncing || !selectedTargetId}
+            onClick={handleSimulateBenchmark}
+            title="Triggers controlled benchmark simulation with the real scanning pipeline"
+            className="px-3 py-2 rounded-lg text-xs font-semibold bg-white/5 border border-white/15 text-zinc-200 hover:border-lime-400/40 hover:text-white disabled:opacity-50 transition-colors flex items-center gap-1.5"
+          >
+            <Sparkles className={`w-3.5 h-3.5 text-lime-400 ${simulating ? 'animate-spin' : ''}`} />
+            {simulating ? 'Simulating...' : 'Simulate 24h Sync'}
+          </button>
+
+          <button
+            disabled={syncing || simulating || !selectedTargetId}
             onClick={handleManualSync}
             className="px-4 py-2 rounded-lg text-xs font-bold bg-lime-300 text-black hover:bg-lime-200 disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-lg shadow-lime-300/10"
           >
@@ -213,6 +253,19 @@ export function SecuritySyncPanel({ targets, onSyncComplete }: SecuritySyncPanel
         <div className="mt-3 text-xs font-mono text-lime-400/90 flex items-center gap-2 bg-lime-950/30 border border-lime-500/20 px-3 py-1.5 rounded-lg">
           <Activity className="w-3.5 h-3.5 shrink-0 animate-pulse" />
           <span>{statusMessage}</span>
+        </div>
+      )}
+
+      {/* AI Explanation Banner (if available) */}
+      {latestSync?.llmExplanation && (
+        <div className="mt-4 p-3.5 rounded-xl border border-indigo-500/25 bg-indigo-950/20 text-xs">
+          <div className="flex items-center gap-2 text-indigo-300 font-mono font-bold mb-1">
+            <Sparkles className="w-4 h-4 text-indigo-400" />
+            <span>AI Authorization Analysis (Verified Finding Insight)</span>
+          </div>
+          <p className="text-zinc-300 leading-relaxed font-sans">
+            {latestSync.llmExplanation}
+          </p>
         </div>
       )}
 
@@ -270,21 +323,23 @@ export function SecuritySyncPanel({ targets, onSyncComplete }: SecuritySyncPanel
           </div>
         </div>
 
-        {/* Findings Movement */}
+        {/* Attack Surface & Path Regressions */}
         <div className="p-3.5 rounded-xl border border-white/5 bg-black/25">
           <div className="flex items-center justify-between text-xs text-zinc-400">
-            <span>Finding Trajectory</span>
-            <Activity className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Attack Surface Delta</span>
+            <Route className="w-3.5 h-3.5 text-indigo-400" />
           </div>
           <div className="text-xl font-bold text-white mt-1.5 font-mono flex items-center gap-2">
-            <span className="text-rose-400">+{latestSync?.newFindingCount ?? 0}</span>
+            <span className={attackPathDiff && attackPathDiff.newlyReachableResources.length > 0 ? 'text-rose-400' : 'text-zinc-300'}>
+              +{attackPathDiff?.newlyReachableResources.length ?? 0} res
+            </span>
             <span className="text-zinc-600">/</span>
-            <span className="text-emerald-400">-{latestSync?.resolvedFindingCount ?? 0}</span>
-            <span className="text-zinc-600">/</span>
-            <span className="text-zinc-300">={latestSync?.unchangedFindingCount ?? 0}</span>
+            <span className={attackPathDiff && attackPathDiff.newlyExposedSensitiveData.length > 0 ? 'text-rose-400' : 'text-zinc-300'}>
+              +{attackPathDiff?.newlyExposedSensitiveData.length ?? 0} sens
+            </span>
           </div>
           <div className="text-[11px] text-zinc-500 mt-1">
-            New / Resolved / Unchanged findings
+            Reachable resources & sensitive assets
           </div>
         </div>
       </div>
@@ -313,6 +368,21 @@ export function SecuritySyncPanel({ targets, onSyncComplete }: SecuritySyncPanel
           {driftEvents.length > 0 && (
             <span className="px-1.5 py-0.2 rounded-full bg-amber-400/20 text-amber-300 text-[10px]">
               {driftEvents.length}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab('attack-paths')}
+          className={`pb-2 transition-colors flex items-center gap-1.5 ${
+            activeTab === 'attack-paths'
+              ? 'border-b-2 border-lime-400 text-lime-300 font-bold'
+              : 'text-zinc-400 hover:text-zinc-200'
+          }`}
+        >
+          <span>Attack Path Regression</span>
+          {attackPathDiff && attackPathDiff.newlyReachableResources.length > 0 && (
+            <span className="px-1.5 py-0.2 rounded-full bg-rose-400/20 text-rose-300 text-[10px]">
+              +{attackPathDiff.newlyReachableResources.length}
             </span>
           )}
         </button>
@@ -448,13 +518,85 @@ export function SecuritySyncPanel({ targets, onSyncComplete }: SecuritySyncPanel
         </div>
       )}
 
-      {/* Tab 3: History */}
+      {/* Tab 3: Attack Path Regression */}
+      {activeTab === 'attack-paths' && (
+        <div className="mt-4 space-y-3">
+          {attackPathDiff ? (
+            <div className="space-y-3 text-xs">
+              <div className="p-3.5 rounded-xl border border-white/5 bg-black/25">
+                <span className="text-zinc-400 font-mono uppercase text-[11px] block mb-2">
+                  Newly Reachable Resources Through Exploitation
+                </span>
+                {attackPathDiff.newlyReachableResources.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {attackPathDiff.newlyReachableResources.map((res, i) => (
+                      <span key={i} className="px-2 py-1 rounded bg-rose-950/40 border border-rose-500/30 text-rose-300 font-mono text-xs">
+                        + {res}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-zinc-500">No new downstream resources reachable in current sync.</p>
+                )}
+              </div>
+
+              <div className="p-3.5 rounded-xl border border-white/5 bg-black/25">
+                <span className="text-zinc-400 font-mono uppercase text-[11px] block mb-2">
+                  Newly Exposed Sensitive Data Tokens
+                </span>
+                {attackPathDiff.newlyExposedSensitiveData.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {attackPathDiff.newlyExposedSensitiveData.map((data, i) => (
+                      <span key={i} className="px-2 py-1 rounded bg-amber-950/40 border border-amber-500/30 text-amber-300 font-mono text-xs">
+                        + {data}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-zinc-500">No new sensitive fields exposed along active attack paths.</p>
+                )}
+              </div>
+
+              {attackPathDiff.changedAttackPaths.length > 0 && (
+                <div className="p-3.5 rounded-xl border border-white/5 bg-black/25">
+                  <span className="text-zinc-400 font-mono uppercase text-[11px] block mb-2">
+                    Attack Path Depth Modifications
+                  </span>
+                  <div className="space-y-2">
+                    {attackPathDiff.changedAttackPaths.map((cp, idx) => (
+                      <div key={idx} className="p-2 rounded bg-white/[0.02] border border-white/5 font-mono text-[11px]">
+                        <span className="text-white font-bold">{cp.entryPoint}</span>: Depth shifted from {cp.previousDepth} &rarr; <span className="text-rose-400 font-bold">{cp.currentDepth}</span>
+                        {cp.newSteps.length > 0 && (
+                          <div className="text-zinc-400 mt-1">
+                            New steps: {cp.newSteps.join(' -> ')}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-white/5 bg-black/20 p-8 text-center text-xs text-zinc-500">
+              <Network className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
+              Attack paths remain consistent with previous baseline.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab 4: History */}
       {activeTab === 'history' && (
         <div className="mt-4">
           {history.length > 0 ? (
             <div className="space-y-2">
               {history.map((rec) => (
-                <div key={rec.id} className="flex items-center justify-between p-3 rounded-xl border border-white/5 bg-black/20 text-xs hover:border-lime-400/20 transition-colors">
+                <div 
+                  key={rec.id} 
+                  onClick={() => setInspectSyncRecord(rec)}
+                  className="flex items-center justify-between p-3 rounded-xl border border-white/5 bg-black/20 text-xs hover:border-lime-400/40 transition-colors cursor-pointer group"
+                >
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-mono text-zinc-300">{rec.id.slice(0, 8)}</span>
@@ -470,13 +612,19 @@ export function SecuritySyncPanel({ targets, onSyncComplete }: SecuritySyncPanel
                           Drift
                         </span>
                       )}
+                      {rec.simulationMode && (
+                        <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-indigo-400/20 text-indigo-300">
+                          Simulated
+                        </span>
+                      )}
                     </div>
                     <div className="text-[11px] text-zinc-500 mt-1 font-mono">
                       {new Date(rec.startedAt).toLocaleString()} · Findings: +{rec.newFindingCount} -{rec.resolvedFindingCount} ={rec.unchangedFindingCount}
                     </div>
                   </div>
-                  <div className="text-right font-mono text-[11px] text-zinc-400">
-                    {rec.completedAt ? `Duration: ${Math.round((new Date(rec.completedAt).getTime() - new Date(rec.startedAt).getTime()) / 1000)}s` : 'In progress'}
+                  <div className="text-right font-mono text-[11px] text-zinc-400 flex items-center gap-2">
+                    <span>{rec.completedAt ? `Duration: ${Math.round((new Date(rec.completedAt).getTime() - new Date(rec.startedAt).getTime()) / 1000)}s` : 'In progress'}</span>
+                    <ExternalLink className="w-3.5 h-3.5 text-zinc-600 group-hover:text-lime-300 transition-colors" />
                   </div>
                 </div>
               ))}
@@ -486,6 +634,79 @@ export function SecuritySyncPanel({ targets, onSyncComplete }: SecuritySyncPanel
               No previous sync runs found for this target.
             </div>
           )}
+        </div>
+      )}
+
+      {/* Sync Record Modal Inspection */}
+      {inspectSyncRecord && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-[#121215] border border-white/15 rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-white font-bold font-mono">Sync Audit: {inspectSyncRecord.id.slice(0, 12)}</h3>
+                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded ${inspectSyncRecord.driftDetected ? 'bg-amber-400/20 text-amber-300' : 'bg-lime-400/20 text-lime-300'}`}>
+                    {inspectSyncRecord.driftDetected ? 'DRIFT DETECTED' : 'STABLE'}
+                  </span>
+                </div>
+                <p className="text-zinc-500 text-xs mt-1">Started: {new Date(inspectSyncRecord.startedAt).toLocaleString()}</p>
+              </div>
+              <button 
+                onClick={() => setInspectSyncRecord(null)}
+                className="p-1 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs font-mono">
+              <div className="p-2.5 rounded-lg bg-black/40 border border-white/5">
+                <span className="text-zinc-500 block">New Findings</span>
+                <span className="text-lg font-bold text-rose-400">+{inspectSyncRecord.newFindingCount}</span>
+              </div>
+              <div className="p-2.5 rounded-lg bg-black/40 border border-white/5">
+                <span className="text-zinc-500 block">Resolved</span>
+                <span className="text-lg font-bold text-emerald-400">-{inspectSyncRecord.resolvedFindingCount}</span>
+              </div>
+              <div className="p-2.5 rounded-lg bg-black/40 border border-white/5">
+                <span className="text-zinc-500 block">Unchanged</span>
+                <span className="text-lg font-bold text-zinc-300">={inspectSyncRecord.unchangedFindingCount}</span>
+              </div>
+              <div className="p-2.5 rounded-lg bg-black/40 border border-white/5">
+                <span className="text-zinc-500 block">Drift Events</span>
+                <span className="text-lg font-bold text-amber-400">{inspectSyncRecord.driftEvents?.length ?? 0}</span>
+              </div>
+            </div>
+
+            {inspectSyncRecord.driftEvents && inspectSyncRecord.driftEvents.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-xs font-mono uppercase text-amber-300">Authorization Drift Events</h4>
+                {inspectSyncRecord.driftEvents.map((evt, i) => (
+                  <div key={i} className="p-3 rounded-lg border border-amber-500/20 bg-amber-950/20 text-xs font-mono">
+                    <span className="font-bold text-white">{evt.endpoint}</span> ({evt.driftType})
+                    <div className="text-zinc-400 text-[11px] mt-1">{evt.previousBehavior} &rarr; <span className="text-amber-200">{evt.currentBehavior}</span></div>
+                    {evt.evidence && <div className="text-zinc-500 text-[10px] mt-1">Proof: {evt.evidence}</div>}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {inspectSyncRecord.llmExplanation && (
+              <div className="p-3.5 rounded-lg border border-indigo-500/20 bg-indigo-950/30 text-xs">
+                <span className="text-indigo-300 font-mono font-bold block mb-1">AI Contextual Analysis</span>
+                <p className="text-zinc-300">{inspectSyncRecord.llmExplanation}</p>
+              </div>
+            )}
+
+            <div className="pt-2 flex justify-end">
+              <button 
+                onClick={() => setInspectSyncRecord(null)}
+                className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-mono"
+              >
+                Close Audit View
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

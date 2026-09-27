@@ -201,6 +201,20 @@ async function forward(request: NextRequest, context: { params: Promise<{ path: 
       return NextResponse.json({ sync });
     }
 
+    // POST /api/sync/:targetId/run-now & POST /api/sync/:targetId/start
+    const syncRunNowMatch = route.match(/^sync\/([^/]+)\/(?:run-now|start)$/);
+    if (syncRunNowMatch && request.method === 'POST') {
+      const res = await inProcessBackend.triggerSync(syncRunNowMatch[1]);
+      return NextResponse.json(res, { status: 202 });
+    }
+
+    // POST /api/sync/:targetId/simulate-benchmark
+    const syncSimulateMatch = route.match(/^sync\/([^/]+)\/simulate-benchmark$/);
+    if (syncSimulateMatch && request.method === 'POST') {
+      const res = await inProcessBackend.simulateBenchmarkSync(syncSimulateMatch[1]);
+      return NextResponse.json(res);
+    }
+
     // POST /api/sync/:targetId
     const syncTriggerMatch = route.match(/^sync\/([^/]+)$/);
     if (syncTriggerMatch && request.method === 'POST') {

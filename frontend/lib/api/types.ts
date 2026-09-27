@@ -61,6 +61,26 @@ export interface DriftEvent {
   evidence?: string;
 }
 
+export interface AttackPathDiff {
+  newlyReachableResources: string[];
+  disappearedAttackPaths: string[];
+  changedAttackPaths: Array<{
+    id: string;
+    entryPoint: string;
+    previousDepth: number;
+    currentDepth: number;
+    newSteps: string[];
+  }>;
+  newlyExposedSensitiveData: string[];
+}
+
+export interface ImpactDiff {
+  newlyDirectlyExposed: string[];
+  newlyIndirectlyReachable: string[];
+  newlyExposedSensitiveFields: string[];
+  newlyAffectedIdentities: string[];
+}
+
 export interface SyncRecord {
   id: string;
   targetId: string;
@@ -74,11 +94,15 @@ export interface SyncRecord {
   endpointDiff?: EndpointDiff;
   findingComparisons?: FindingComparison[];
   driftEvents?: DriftEvent[];
+  attackPathDiff?: AttackPathDiff;
+  impactDiff?: ImpactDiff;
   newFindingCount: number;
   resolvedFindingCount: number;
   unchangedFindingCount: number;
   regressedFindingCount: number;
   driftDetected: boolean;
+  simulationMode?: boolean;
+  llmExplanation?: string;
   error?: string;
 }
 

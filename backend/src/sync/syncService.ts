@@ -5,15 +5,84 @@ import { createSnapshot } from './snapshotEngine.js';
 import { diffEndpoints } from './diffEngine.js';
 import { compareFindings, fingerprintFinding } from './findingComparator.js';
 import { sandboxFetch, assertAuthorizedTarget } from '../utils/targetSafety.js';
-import type { ScanRecord, SyncRecord, MonitoringConfig, DriftEvent } from '../models/types.js';
+import type { ScanRecord, SyncRecord, MonitoringConfig, DriftEvent, AttackPathDiff, ImpactDiff, AttackPath, Finding } from '../models/types.js';
 import { env } from '../config/env.js';
+import { explainFinding } from '../ai/explanationService.js';
+
+export function diffAttackPaths(previous: AttackPath[] = [], current: AttackPath[] = []): AttackPathDiff {
+  const prevResources = new Set(previous.flatMap((p) => p.affectedResources));
+  const currResources = new Set(current.flatMap((p) => p.affectedResources));
+  const newlyReachableResources = Array.from(currResources).filter((r) => !prevResources.has(r));
+
+  const prevSensitive = new Set(previous.flatMap((p) => p.sensitiveData));
+  const currSensitive = new Set(current.flatMap((p) => p.sensitiveData));
+  const newlyExposedSensitiveData = Array.from(currSensitive).filter((s) => !prevSensitive.has(s));
+
+  const prevMap = new Map(previous.map((p) => [p.entryPoint, p]));
+  const currMap = new Map(current.map((p) => [p.entryPoint, p]));
+
+  const disappearedAttackPaths: string[] = [];
+  for (const [entryPoint, p] of prevMap) {
+    if (!currMap.has(entryPoint)) {
+      disappearedAttackPaths.push(`${p.id} (${entryPoint})`);
+    }
+  }
+
+  const changedAttackPaths: AttackPathDiff['changedAttackPaths'] = [];
+  for (const [entryPoint, curr] of currMap) {
+    const prev = prevMap.get(entryPoint);
+    if (prev && (prev.depth !== curr.depth || prev.steps.length !== curr.steps.length)) {
+      const prevStepLabels = new Set(prev.steps.map((s) => s.label));
+      const newSteps = curr.steps.filter((s) => !prevStepLabels.has(s.label)).map((s) => s.label);
+      changedAttackPaths.push({
+        id: curr.id,
+        entryPoint,
+        previousDepth: prev.depth,
+        currentDepth: curr.depth,
+        newSteps,
+      });
+    }
+  }
+
+  return {
+    newlyReachableResources,
+    disappearedAttackPaths,
+    changedAttackPaths,
+    newlyExposedSensitiveData,
+  };
+}
+
+export function diffImpacts(previousFindings: Finding[] = [], currentFindings: Finding[] = []): ImpactDiff {
+  const prevDirect = new Set(previousFindings.flatMap((f) => f.impact?.directlyExposed ?? []));
+  const currDirect = new Set(currentFindings.flatMap((f) => f.impact?.directlyExposed ?? []));
+  const newlyDirectlyExposed = Array.from(currDirect).filter((x) => !prevDirect.has(x));
+
+  const prevIndirect = new Set(previousFindings.flatMap((f) => f.impact?.indirectlyReachable ?? []));
+  const currIndirect = new Set(currentFindings.flatMap((f) => f.impact?.indirectlyReachable ?? []));
+  const newlyIndirectlyReachable = Array.from(currIndirect).filter((x) => !prevIndirect.has(x));
+
+  const prevFields = new Set(previousFindings.flatMap((f) => f.impact?.sensitiveFields ?? []));
+  const currFields = new Set(currentFindings.flatMap((f) => f.impact?.sensitiveFields ?? []));
+  const newlyExposedSensitiveFields = Array.from(currFields).filter((x) => !prevFields.has(x));
+
+  const prevIdentities = new Set(previousFindings.flatMap((f) => f.impact?.affectedIdentities ?? []));
+  const currIdentities = new Set(currentFindings.flatMap((f) => f.impact?.affectedIdentities ?? []));
+  const newlyAffectedIdentities = Array.from(currIdentities).filter((x) => !prevIdentities.has(x));
+
+  return {
+    newlyDirectlyExposed,
+    newlyIndirectlyReachable,
+    newlyExposedSensitiveFields,
+    newlyAffectedIdentities,
+  };
+}
 
 /**
  * Core 24-Hour Security Sync service.
  * Runs: OpenAPI fetch → snapshot → diff → selective rescan → finding comparison → drift detection → graph update.
  * Both manual (POST /api/sync/:id) and scheduler use this same function.
  */
-export async function runSync(targetId: string): Promise<SyncRecord> {
+export async function runSync(targetId: string, options?: { simulationMode?: boolean }): Promise<SyncRecord> {
   const target = store.getTarget(targetId);
   if (!target) throw new Error(`Target ${targetId} not found`);
 
@@ -187,11 +256,30 @@ export async function runSync(targetId: string): Promise<SyncRecord> {
     syncRecord.driftEvents = driftEvents;
     syncRecord.driftDetected = driftEvents.length > 0;
 
-    // Step 8: Persist snapshot ONLY if sync succeeded
+    // Step 8: Attack path regression detection
+    const previousAttackPaths = previousScan?.attackPaths ?? [];
+    const currentAttackPaths = newScan?.attackPaths ?? [];
+    syncRecord.attackPathDiff = diffAttackPaths(previousAttackPaths, currentAttackPaths);
+
+    // Step 9: Contextual impact update
+    syncRecord.impactDiff = diffImpacts(previousFindings, currentFindings);
+
+    // Step 10: Optional AI explanation layer (graceful fallback)
+    if (currentFindings.length > 0) {
+      try {
+        const topFinding = currentFindings.find((f) => f.severity === 'critical') || currentFindings[0];
+        const explanation = await explainFinding(topFinding);
+        syncRecord.llmExplanation = `${explanation.vulnerabilityReason} ${explanation.boundaryCrossed} Remediation: ${explanation.remediationRecommendation}`;
+      } catch {
+        // Fallback: scanner never fails on AI layer failure
+      }
+    }
+
+    // Step 11: Persist snapshot ONLY if sync succeeded
     store.putSnapshot(currentSnapshot);
     syncRecord.currentSnapshotId = currentSnapshot.id;
 
-    // Step 9: Update monitoring — set baseline if this is the first successful sync
+    // Step 12: Update monitoring — set baseline if this is the first successful sync
     if (monitoring && !monitoring.baselineScanId && newScan) {
       monitoring.baselineScanId = newScan.id;
       monitoring.baselineSnapshotId = currentSnapshot.id;
