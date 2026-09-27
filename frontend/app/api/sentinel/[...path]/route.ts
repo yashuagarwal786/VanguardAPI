@@ -22,7 +22,7 @@ async function forward(request: NextRequest, context: { params: Promise<{ path: 
       signal: AbortSignal.timeout(3500),
     });
 
-    if (upstreamRes.ok || upstreamRes.status < 500) {
+    if (upstreamRes.ok) {
       return new NextResponse(await upstreamRes.arrayBuffer(), {
         status: upstreamRes.status,
         headers: { 'Content-Type': upstreamRes.headers.get('content-type') || 'application/json' },
@@ -173,3 +173,5 @@ async function forward(request: NextRequest, context: { params: Promise<{ path: 
 
 export const GET = forward;
 export const POST = forward;
+export const PUT = forward;
+export const DELETE = forward;

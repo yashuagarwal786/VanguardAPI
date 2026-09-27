@@ -11,9 +11,9 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
     });
   } catch (error) {
     if (error instanceof Error && error.name === 'TimeoutError') throw new Error('The request timed out. Check the backend and try again.');
-    throw new Error('Cannot reach SentinelAPI. Start the backend at 127.0.0.1:5000 and retry.');
+    throw new Error('Cannot reach VanguardAPI scanner. Please try again.');
   }
   const payload = await response.json().catch(() => ({})) as { error?: string; message?: string };
-  if (!response.ok) throw new Error(payload.error || payload.message || `SentinelAPI returned HTTP ${response.status}`);
+  if (!response.ok) throw new Error(payload.error || payload.message || `VanguardAPI returned HTTP ${response.status}`);
   return payload as T;
 }

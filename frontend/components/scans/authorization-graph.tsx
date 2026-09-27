@@ -438,7 +438,7 @@ export function AuthorizationGraph({ nodes = [], edges = [], targetBaseUrl, targ
           <svg
             viewBox={`0 0 ${svgWidth} ${svgHeight}`}
             width={fitToWidth && zoomLevel === 1 ? '100%' : svgWidth}
-            height={fitToWidth && zoomLevel === 1 ? 'auto' : svgHeight}
+            height={fitToWidth && zoomLevel === 1 ? '100%' : svgHeight}
             className={fitToWidth && zoomLevel === 1 ? 'w-full h-auto select-none' : 'select-none'}
             role="img"
             aria-label="Layered API Authorization Topology Graph"
