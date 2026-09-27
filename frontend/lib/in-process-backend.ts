@@ -517,7 +517,7 @@ export const inProcessBackend = {
         const pathId = `path:${findingId}`;
 
         edges.push(
-          { source: `identity:${userAName}`, target: `object:order:${victimObjectId}`, type: 'UNAUTHORIZED_ACCESS', label: 'BOLA Breach' },
+          { source: `endpoint:ep-1`, target: `object:order:${victimObjectId}`, type: 'UNAUTHORIZED_ACCESS', label: 'BOLA Breach' },
           { source: `object:order:${victimObjectId}`, target: 'data:payment_card', type: 'RETURNS', label: 'leaks data' }
         );
 

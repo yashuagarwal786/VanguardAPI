@@ -107,12 +107,12 @@ function getLayerForType(type: string): LayerType {
   return 'RESOURCES';
 }
 
-const LAYER_WIDTH = 200;
-const LAYER_GAP = 32;
-const PADDING_X = 30;
-const PADDING_Y = 65;
-const NODE_WIDTH = 175;
-const NODE_HEIGHT = 52;
+const LAYER_WIDTH = 230;
+const LAYER_GAP = 48;
+const PADDING_X = 36;
+const PADDING_Y = 70;
+const NODE_WIDTH = 210;
+const NODE_HEIGHT = 56;
 const VERTICAL_GAP = 18;
 
 export const DEFAULT_API_GRAPH_NODES: GraphNode[] = [
@@ -186,9 +186,9 @@ export const DEFAULT_API_GRAPH_EDGES: GraphEdge[] = [
   { source: 'resource:admin', target: 'object:admin_claim', type: 'RETURNS', label: 'assigns' },
 
   // Unauthorized Access (Red breach edges)
-  { source: 'identity:alice', target: 'object:order:3', type: 'UNAUTHORIZED_ACCESS', label: 'BOLA Breach' },
-  { source: 'identity:alice', target: 'object:user:2', type: 'UNAUTHORIZED_ACCESS', label: 'BOLA Breach' },
-  { source: 'identity:alice', target: 'object:admin_claim', type: 'UNAUTHORIZED_ACCESS', label: 'BFLA Escalation' },
+  { source: 'endpoint:get_orders', target: 'object:order:3', type: 'UNAUTHORIZED_ACCESS', label: 'BOLA Breach' },
+  { source: 'endpoint:get_users', target: 'object:user:2', type: 'UNAUTHORIZED_ACCESS', label: 'BOLA Breach' },
+  { source: 'endpoint:put_admin_role', target: 'object:admin_claim', type: 'UNAUTHORIZED_ACCESS', label: 'BFLA Escalation' },
 
   // Objects to Sensitive Data
   { source: 'object:order:3', target: 'data:pan_card', type: 'RETURNS', label: 'exposes PAN' },
@@ -242,15 +242,14 @@ export function AuthorizationGraph({ nodes = [], edges = [], targetBaseUrl, targ
       maxNodesInLayer = Math.max(maxNodesInLayer, layerMap[l.id].length);
     });
 
-    const calculatedHeight = Math.max(460, PADDING_Y * 2 + maxNodesInLayer * (NODE_HEIGHT + VERTICAL_GAP));
+    const calculatedHeight = Math.max(540, PADDING_Y * 2 + maxNodesInLayer * (NODE_HEIGHT + VERTICAL_GAP));
 
-    const posMap = new Map<string, { x: number; y: number; width: number; height: number; layer: LayerType }>();
+    const posMap = new Map<string, { x: number; y: number; width: number; height: number; layer: LayerType; colIdx: number }>();
 
     activeLayers.forEach((layerDef, colIdx) => {
       const columnNodes = layerMap[layerDef.id];
       const columnX = PADDING_X + colIdx * (LAYER_WIDTH + LAYER_GAP) + LAYER_WIDTH / 2;
-      const totalColHeight = columnNodes.length * NODE_HEIGHT + (columnNodes.length - 1) * VERTICAL_GAP;
-      const startY = (calculatedHeight - totalColHeight) / 2 + NODE_HEIGHT / 2;
+      const startY = PADDING_Y + 12 + NODE_HEIGHT / 2;
 
       columnNodes.forEach((node, rowIdx) => {
         const y = startY + rowIdx * (NODE_HEIGHT + VERTICAL_GAP);
@@ -260,6 +259,7 @@ export function AuthorizationGraph({ nodes = [], edges = [], targetBaseUrl, targ
           width: NODE_WIDTH,
           height: NODE_HEIGHT,
           layer: layerDef.id,
+          colIdx,
         });
       });
     });
@@ -510,8 +510,16 @@ export function AuthorizationGraph({ nodes = [], edges = [], targetBaseUrl, targ
               const x2 = tgt.x - tgt.width / 2;
               const y2 = tgt.y;
 
-              const dx = Math.max(40, (x2 - x1) * 0.45);
-              const pathD = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+              const colSpan = Math.abs((tgt.colIdx ?? 1) - (src.colIdx ?? 0));
+              let pathD = '';
+              if (colSpan > 1) {
+                const curvature = Math.min(65, colSpan * 24);
+                const archY = y1 < y2 ? Math.min(y1, y2) - curvature : Math.max(y1, y2) + curvature;
+                pathD = `M ${x1} ${y1} C ${x1 + 60} ${archY}, ${x2 - 60} ${archY}, ${x2} ${y2}`;
+              } else {
+                const dx = Math.max(45, (x2 - x1) * 0.48);
+                pathD = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+              }
 
               const midX = (x1 + x2) / 2;
               const midY = (y1 + y2) / 2;
@@ -618,11 +626,11 @@ export function AuthorizationGraph({ nodes = [], edges = [], targetBaseUrl, targ
                   </g>
 
                   <text x="10" y="36" fill="#f4f4f5" fontSize="11" fontWeight="600" className="font-sans">
-                    {node.label.length > 18 ? `${node.label.slice(0, 16)}…` : node.label}
+                    {node.label.length > 26 ? `${node.label.slice(0, 24)}…` : node.label}
                   </text>
 
                   <text x="10" y="48" fill="#71717a" fontSize="8.5" className="font-mono">
-                    {node.id.length > 22 ? `${node.id.slice(0, 20)}…` : node.id}
+                    {node.id.length > 28 ? `${node.id.slice(0, 26)}…` : node.id}
                   </text>
                 </g>
               );
