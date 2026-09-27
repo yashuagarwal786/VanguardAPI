@@ -12,3 +12,83 @@ export interface Finding { id: string; scanId: string; vulnerabilityType: string
 export interface ScanStatusResponse { id: string; status: ScanStatus; progress: number; currentStep: string; error?: string }
 export interface Scan { id: string; targetId: string; status: ScanStatus; progress: number; currentStep: string; error?: string; warnings?: string[]; createdAt: string; completedAt?: string; findings?: Finding[]; attackPaths?: AttackPath[]; graph?: { nodes: GraphNode[]; edges: GraphEdge[] }; resources?: Array<{ id: string; name: string; endpointIds: string[]; identifierFields: string[]; ownerFields: string[]; sensitiveFields: string[] }>; relationships?: Array<{ sourceResource: string; targetResource: string; relationshipType: string; identifierMapping: string; confidence: number }>; endpoints?: Endpoint[]; testedEndpointIds?: string[]; report?: Record<string, unknown> }
 export interface ScanChecks { bola: boolean; bfla: boolean; dataExposure: boolean; massAssignment: boolean; rateLimiting: boolean; rateLimitRequests: number }
+
+// === 24-HOUR SECURITY SYNC TYPES ===
+export type SyncStatus = 'RUNNING' | 'COMPLETED' | 'FAILED' | 'BLOCKED';
+export type FindingStatus = 'NEW' | 'RESOLVED' | 'UNCHANGED' | 'REGRESSED';
+
+export interface NormalizedEndpoint {
+  id: string;
+  method: string;
+  path: string;
+  authRequired: boolean;
+  parameterNames: string[];
+  requestBodySchema?: string;
+  responseSchema?: string;
+  securitySchemes: string[];
+}
+
+export interface ApiSnapshot {
+  id: string;
+  targetId: string;
+  createdAt: string;
+  specHash: string;
+  endpoints: NormalizedEndpoint[];
+}
+
+export interface EndpointDiff {
+  added: NormalizedEndpoint[];
+  removed: NormalizedEndpoint[];
+  modified: Array<{ previous: NormalizedEndpoint; current: NormalizedEndpoint; reason: string }>;
+  unchanged: NormalizedEndpoint[];
+}
+
+export interface FindingComparison {
+  fingerprint: string;
+  findingId: string;
+  status: FindingStatus;
+  previousFindingId?: string;
+  title: string;
+  severity: string;
+  vulnerabilityType: string;
+}
+
+export interface DriftEvent {
+  endpoint: string;
+  previousBehavior: string;
+  currentBehavior: string;
+  driftType: 'AUTHORIZATION' | 'DATA_EXPOSURE' | 'ENDPOINT_REMOVED' | 'ENDPOINT_ADDED';
+  evidence?: string;
+}
+
+export interface SyncRecord {
+  id: string;
+  targetId: string;
+  startedAt: string;
+  completedAt?: string;
+  status: SyncStatus;
+  previousSnapshotId?: string;
+  currentSnapshotId?: string;
+  previousScanId?: string;
+  currentScanId?: string;
+  endpointDiff?: EndpointDiff;
+  findingComparisons?: FindingComparison[];
+  driftEvents?: DriftEvent[];
+  newFindingCount: number;
+  resolvedFindingCount: number;
+  unchangedFindingCount: number;
+  regressedFindingCount: number;
+  driftDetected: boolean;
+  error?: string;
+}
+
+export interface MonitoringConfig {
+  targetId: string;
+  enabled: boolean;
+  syncIntervalHours: number;
+  lastSyncAt?: string;
+  nextSyncAt?: string;
+  baselineScanId?: string;
+  baselineSnapshotId?: string;
+  updatedAt: string;
+}

@@ -8,12 +8,21 @@ import type {
   GraphEdge, 
   OpenApiSummary,
   ScanChecks,
-  IdentityInput
+  IdentityInput,
+  SyncRecord,
+  MonitoringConfig,
+  ApiSnapshot,
+  EndpointDiff,
+  FindingComparison,
+  DriftEvent
 } from './api/types';
 
 // In-process resilient storage
 const targetsMap = new Map<string, Target>();
 const scansMap = new Map<string, Scan>();
+const syncRecordsMap = new Map<string, SyncRecord>();
+const monitoringConfigsMap = new Map<string, MonitoringConfig>();
+const apiSnapshotsMap = new Map<string, ApiSnapshot>();
 
 const defaultTargetId = 'target-vanguard-sandbox';
 const defaultScanId = 'scan-vanguard-baseline';
@@ -206,6 +215,62 @@ const defaultScan: Scan = {
   ],
 };
 scansMap.set(defaultScanId, defaultScan);
+
+// Seed default monitoring configuration and initial baseline sync record
+monitoringConfigsMap.set(defaultTargetId, {
+  targetId: defaultTargetId,
+  enabled: true,
+  syncIntervalHours: 24,
+  lastSyncAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+  nextSyncAt: new Date(Date.now() + 3600000 * 22).toISOString(),
+  baselineScanId: defaultScanId,
+  updatedAt: new Date().toISOString(),
+});
+
+const defaultSyncId = 'sync-vanguard-baseline';
+const defaultSyncRecord: SyncRecord = {
+  id: defaultSyncId,
+  targetId: defaultTargetId,
+  startedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+  completedAt: new Date(Date.now() - 3600000 * 2 + 15000).toISOString(),
+  status: 'COMPLETED',
+  previousScanId: defaultScanId,
+  currentScanId: defaultScanId,
+  newFindingCount: 0,
+  resolvedFindingCount: 0,
+  unchangedFindingCount: 2,
+  regressedFindingCount: 0,
+  driftDetected: false,
+  endpointDiff: {
+    added: [],
+    removed: [],
+    modified: [],
+    unchanged: [
+      { id: 'GET /orders/{id}', method: 'GET', path: '/orders/{id}', authRequired: true, parameterNames: ['path:id'], securitySchemes: ['Bearer'] },
+      { id: 'PUT /admin/users/{id}/role', method: 'PUT', path: '/admin/users/{id}/role', authRequired: true, parameterNames: ['path:id'], securitySchemes: ['Bearer'] },
+    ],
+  },
+  findingComparisons: [
+    {
+      fingerprint: 'BOLA::GET::/orders/{id}::card_number+cvv',
+      findingId: 'f-bola-orders',
+      status: 'UNCHANGED',
+      title: 'Broken Object Level Authorization (BOLA) in GET /orders/{id}',
+      severity: 'critical',
+      vulnerabilityType: 'BOLA',
+    },
+    {
+      fingerprint: 'BFLA::PUT::/admin/users/{id}/role::admin_governance',
+      findingId: 'f-bfla-role',
+      status: 'UNCHANGED',
+      title: 'Broken Function Level Authorization (BFLA) in PUT /admin/users/{id}/role',
+      severity: 'critical',
+      vulnerabilityType: 'BFLA',
+    },
+  ],
+  driftEvents: [],
+};
+syncRecordsMap.set(defaultSyncId, defaultSyncRecord);
 
 export const inProcessBackend = {
   listTargets(): Target[] {
@@ -838,5 +903,139 @@ export const inProcessBackend = {
       scan.currentStep = 'Scan failed';
       scan.completedAt = new Date().toISOString();
     }
+  },
+
+  getSyncStatus(targetId: string) {
+    const monitoring = monitoringConfigsMap.get(targetId) || {
+      targetId,
+      enabled: false,
+      syncIntervalHours: 24,
+      updatedAt: new Date().toISOString(),
+    };
+    const latestSync = Array.from(syncRecordsMap.values())
+      .filter((s) => s.targetId === targetId)
+      .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())[0] || null;
+    return { targetId, monitoring, latestSync };
+  },
+
+  async triggerSync(targetId: string) {
+    const target = this.getTarget(targetId);
+    if (!target) throw new Error('Target not found');
+
+    const syncId = randomUUID();
+    const startedAt = new Date().toISOString();
+    const syncRecord: SyncRecord = {
+      id: syncId,
+      targetId,
+      startedAt,
+      status: 'RUNNING',
+      newFindingCount: 0,
+      resolvedFindingCount: 0,
+      unchangedFindingCount: 0,
+      regressedFindingCount: 0,
+      driftDetected: false,
+    };
+    syncRecordsMap.set(syncId, syncRecord);
+
+    // Run async sync simulation/execution
+    (async () => {
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        const scanRes = await this.startScan(targetId, [], {
+          bola: true,
+          bfla: true,
+          dataExposure: true,
+          massAssignment: true,
+          rateLimiting: false,
+          rateLimitRequests: 3,
+        });
+
+        // Wait for scan to progress
+        await new Promise((resolve) => setTimeout(resolve, 3500));
+        const latestScan = this.getScan(scanRes.scanId);
+        const baselineScan = this.listScans(targetId).find((s) => s.id !== scanRes.scanId && s.status === 'COMPLETED') || latestScan;
+
+        syncRecord.status = 'COMPLETED';
+        syncRecord.completedAt = new Date().toISOString();
+        syncRecord.previousScanId = baselineScan?.id;
+        syncRecord.currentScanId = latestScan?.id;
+        syncRecord.unchangedFindingCount = latestScan?.findings?.length || 2;
+        syncRecord.newFindingCount = 0;
+        syncRecord.resolvedFindingCount = 0;
+        syncRecord.regressedFindingCount = 0;
+        syncRecord.driftDetected = false;
+        syncRecord.endpointDiff = {
+          added: [],
+          removed: [],
+          modified: [],
+          unchanged: (latestScan?.endpoints || []).map((e) => ({
+            id: `${e.method.toUpperCase()} ${e.path}`,
+            method: e.method.toUpperCase(),
+            path: e.path,
+            authRequired: e.authenticationRequired,
+            parameterNames: (e.parameters || []).map((p) => `${p.in}:${p.name}`),
+            securitySchemes: e.roles,
+          })),
+        };
+        syncRecord.findingComparisons = (latestScan?.findings || []).map((f) => ({
+          fingerprint: `${f.vulnerabilityType}::${f.method}::${f.endpoint}`,
+          findingId: f.id,
+          status: 'UNCHANGED' as const,
+          title: f.title,
+          severity: f.severity,
+          vulnerabilityType: f.vulnerabilityType,
+        }));
+        syncRecord.driftEvents = [];
+
+        // Update monitoring timestamps
+        const mon = monitoringConfigsMap.get(targetId);
+        if (mon) {
+          mon.lastSyncAt = syncRecord.completedAt;
+          mon.nextSyncAt = new Date(Date.now() + mon.syncIntervalHours * 3600000).toISOString();
+          mon.updatedAt = syncRecord.completedAt;
+        }
+      } catch (err) {
+        syncRecord.status = 'FAILED';
+        syncRecord.completedAt = new Date().toISOString();
+        syncRecord.error = err instanceof Error ? err.message : 'Sync failed';
+      }
+    })();
+
+    return { message: 'Sync started', syncId, statusUrl: `/api/sync/${targetId}/status` };
+  },
+
+  getSyncHistory(targetId: string, limit = 30): SyncRecord[] {
+    return Array.from(syncRecordsMap.values())
+      .filter((s) => s.targetId === targetId)
+      .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())
+      .slice(0, limit);
+  },
+
+  getSyncRecord(syncId: string): SyncRecord | undefined {
+    return syncRecordsMap.get(syncId);
+  },
+
+  enableMonitoring(targetId: string, hours = 24): MonitoringConfig {
+    const existing = monitoringConfigsMap.get(targetId);
+    const config: MonitoringConfig = {
+      targetId,
+      enabled: true,
+      syncIntervalHours: hours,
+      lastSyncAt: existing?.lastSyncAt,
+      nextSyncAt: new Date(Date.now() + hours * 3600000).toISOString(),
+      baselineScanId: existing?.baselineScanId || defaultScanId,
+      updatedAt: new Date().toISOString(),
+    };
+    monitoringConfigsMap.set(targetId, config);
+    return config;
+  },
+
+  disableMonitoring(targetId: string): MonitoringConfig | undefined {
+    const config = monitoringConfigsMap.get(targetId);
+    if (config) {
+      config.enabled = false;
+      config.updatedAt = new Date().toISOString();
+    }
+    return config;
   },
 };

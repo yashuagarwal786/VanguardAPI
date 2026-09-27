@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Activity, AlertTriangle, ArrowRight, Boxes, CircleDot, Eye, Gauge, LoaderCircle, Network, Play, Plus, ShieldAlert, ShieldCheck, Server } from 'lucide-react';
 import AmbientBackground from '@/components/cyber/ambient-background';
 import { AuthorizationGraph } from '@/components/scans/authorization-graph';
+import { SecuritySyncPanel } from '@/components/dashboard/security-sync-panel';
 import { api } from '@/lib/api/client';
 import { listScans, startScan } from '@/lib/api/scans';
 import { DEMO_IDENTITIES, listTargets, registerDemoTarget } from '@/lib/api/targets';
@@ -63,6 +64,11 @@ export default function DashboardPage() {
     <div className="mb-8 rounded-xl border border-lime-300/25 bg-lime-300/5 p-4 text-sm text-lime-100"><strong>Sandbox demo:</strong> scans run against the bundled, intentionally vulnerable loopback API. Demo credentials are sent only with the scan request; the backend resets its fixture after destructive probes.</div>
 
     <section className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{metrics.map(({ label, value, icon: Icon, color }) => <div key={label} className={`${panel} p-5`}><div className="mb-5 flex items-center justify-between"><span className="text-xs uppercase tracking-wider text-zinc-500">{label}</span><Icon size={18} className={color}/></div><div className="text-2xl font-semibold text-white">{loading ? '—' : value}</div><p className="mt-1 text-xs text-zinc-500">{latest ? `From scan ${latest.id.slice(0, 8)}` : 'Based on latest completed backend scan'}</p></div>)}</section>
+
+    {/* 24-Hour Security Sync Panel */}
+    <section className="mb-8">
+      <SecuritySyncPanel targets={targets} onSyncComplete={() => void refresh()} />
+    </section>
 
     {/* Live Threat & Authorization Graph */}
     <section className="mb-8">

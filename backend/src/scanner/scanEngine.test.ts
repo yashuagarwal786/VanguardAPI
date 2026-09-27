@@ -55,7 +55,7 @@ test('REST end-to-end scan proves sandbox findings, paths, evidence, and reset',
     const specSummary = await jsonRequest<{ summary: { endpointCount: number; resourceCount: number } }>(`${apiUrl}/api/targets/${targetId}/summary`);
     assert.ok(specSummary.summary.endpointCount >= 8, 'target preview should return parsed OpenAPI endpoints');
     assert.ok(specSummary.summary.resourceCount >= 4, 'target preview should return parsed API resources');
-    const scanResult = await jsonRequest<{ scanId: string }>(`${apiUrl}/api/scans`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetId, identities: users, checks: { bola: true, dataExposure: true, rateLimiting: true, rateLimitRequests: 3 } }) });
+    const scanResult = await jsonRequest<{ scanId: string }>(`${apiUrl}/api/scans`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetId, identities: users, checks: { bola: true, bfla: true, massAssignment: true, dataExposure: true, rateLimiting: true, rateLimitRequests: 3 } }) });
     let status: { status: string; progress: number; error?: string } = { status: '', progress: 0 };
     for (let attempt = 0; attempt < 100; attempt += 1) {
       status = await jsonRequest(`${apiUrl}/api/scans/${scanResult.scanId}/status`);

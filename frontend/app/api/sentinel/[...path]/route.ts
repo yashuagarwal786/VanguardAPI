@@ -162,6 +162,52 @@ async function forward(request: NextRequest, context: { params: Promise<{ path: 
       return NextResponse.json({ status: 'reset', message: 'Demo environment verified' });
     }
 
+    // === 24-HOUR SECURITY SYNC ROUTES ===
+    // GET /api/sync/:targetId/status
+    const syncStatusMatch = route.match(/^sync\/([^/]+)\/status$/);
+    if (syncStatusMatch && request.method === 'GET') {
+      const res = inProcessBackend.getSyncStatus(syncStatusMatch[1]);
+      return NextResponse.json(res);
+    }
+
+    // GET /api/sync/:targetId/history
+    const syncHistoryMatch = route.match(/^sync\/([^/]+)\/history$/);
+    if (syncHistoryMatch && request.method === 'GET') {
+      const limit = parseInt(request.nextUrl.searchParams.get('limit') || '30', 10);
+      const history = inProcessBackend.getSyncHistory(syncHistoryMatch[1], limit);
+      return NextResponse.json({ targetId: syncHistoryMatch[1], history });
+    }
+
+    // POST /api/sync/:targetId/enable
+    const syncEnableMatch = route.match(/^sync\/([^/]+)\/enable$/);
+    if (syncEnableMatch && request.method === 'POST') {
+      const body = await request.json().catch(() => ({}));
+      const config = inProcessBackend.enableMonitoring(syncEnableMatch[1], body.syncIntervalHours || 24);
+      return NextResponse.json({ message: 'Monitoring enabled', config });
+    }
+
+    // POST /api/sync/:targetId/disable
+    const syncDisableMatch = route.match(/^sync\/([^/]+)\/disable$/);
+    if (syncDisableMatch && request.method === 'POST') {
+      const config = inProcessBackend.disableMonitoring(syncDisableMatch[1]);
+      return NextResponse.json({ message: 'Monitoring disabled', config });
+    }
+
+    // GET /api/sync/:targetId/:syncId
+    const syncRecordMatch = route.match(/^sync\/([^/]+)\/([^/]+)$/);
+    if (syncRecordMatch && request.method === 'GET') {
+      const sync = inProcessBackend.getSyncRecord(syncRecordMatch[2]);
+      if (!sync) return NextResponse.json({ error: 'Sync record not found' }, { status: 404 });
+      return NextResponse.json({ sync });
+    }
+
+    // POST /api/sync/:targetId
+    const syncTriggerMatch = route.match(/^sync\/([^/]+)$/);
+    if (syncTriggerMatch && request.method === 'POST') {
+      const res = await inProcessBackend.triggerSync(syncTriggerMatch[1]);
+      return NextResponse.json(res, { status: 202 });
+    }
+
     return NextResponse.json({ error: 'Route not found' }, { status: 404 });
   } catch (err: unknown) {
     return NextResponse.json(

@@ -287,12 +287,42 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 200, order);
   }
 
-  // GET /users/:id (VULNERABILITY: BOLA & Plaintext Password Exposure)
+  // GET /orders/:id/payment (VULNERABILITY: Exposes payment data without ownership check)
+  const orderPaymentMatch = cleanPath.match(/^\/orders\/(\d+)\/payment$/);
+  if (orderPaymentMatch && method === 'GET') {
+    const authUser = authenticate(req);
+    if (!authUser) return sendJson(res, 401, { error: 'Unauthorized', status: 401 });
+    const orderId = parseInt(orderPaymentMatch[1], 10);
+    const order = orders[orderId];
+    if (!order) return sendJson(res, 404, { error: 'Order not found', status: 404 });
+    return sendJson(res, 200, { id: orderId, order_id: orderId, user_id: order.user_id, card_number: order.card_number, payment_token: 'tok_' + orderId + '_live', amount: order.amount });
+  }
+
+  // GET /orders/:id/invoice (VULNERABILITY: Returns billing data without ownership check)
+  const orderInvoiceMatch = cleanPath.match(/^\/orders\/(\d+)\/invoice$/);
+  if (orderInvoiceMatch && method === 'GET') {
+    const authUser = authenticate(req);
+    if (!authUser) return sendJson(res, 401, { error: 'Unauthorized', status: 401 });
+    const orderId = parseInt(orderInvoiceMatch[1], 10);
+    const order = orders[orderId];
+    if (!order) return sendJson(res, 404, { error: 'Order not found', status: 404 });
+    return sendJson(res, 200, { id: orderId, order_id: orderId, user_id: order.user_id, billing_address: '123 Victim St, Anytown', internal_metadata: 'invoice-ref-' + orderId + '-INTERNAL' });
+  }
+
+  // GET /orders/:id/shipment (VULNERABILITY: Returns shipment data without ownership check)
+  const orderShipmentMatch = cleanPath.match(/^\/orders\/(\d+)\/shipment$/);
+  if (orderShipmentMatch && method === 'GET') {
+    const authUser = authenticate(req);
+    if (!authUser) return sendJson(res, 401, { error: 'Unauthorized', status: 401 });
+    const orderId = parseInt(orderShipmentMatch[1], 10);
+    const order = orders[orderId];
+    if (!order) return sendJson(res, 404, { error: 'Order not found', status: 404 });
+    return sendJson(res, 200, { id: orderId, order_id: orderId, user_id: order.user_id, tracking_number: 'TRK-' + orderId + '-2026', destination_address: '456 Victim Ave, Springfield' });
+  }
+
+  // GET /users/:id (VULNERABILITY: BOLA & Plaintext Password Exposure) or PATCH /users/:id (Mass Assignment)
   const userMatch = cleanPath.match(/^\/users\/(\d+)$/);
-  if (userMatch) {
-    if (method !== 'GET') {
-      return sendJson(res, 405, { error: 'Method Not Allowed. Please change Postman method to GET.', status: 405 });
-    }
+  if (userMatch && (method === 'GET' || method === 'PATCH')) {
     const authUser = authenticate(req);
     if (!authUser) {
       return sendJson(res, 401, { error: 'Unauthorized: missing or invalid Bearer token', status: 401 });
@@ -304,7 +334,32 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 404, { error: `User ${userId} not found`, status: 404 });
     }
 
+    if (method === 'PATCH') {
+      const body = await parseRequestBody(req);
+      Object.assign(userProfile, body);
+      return sendJson(res, 200, userProfile);
+    }
+
     return sendJson(res, 200, userProfile);
+  }
+
+  // POST /admin/users/:id/role (VULNERABILITY: BFLA - Unprotected admin role change)
+  const adminRoleMatch = cleanPath.match(/^\/admin\/users\/(\d+)\/role$/);
+  if (adminRoleMatch && method === 'POST') {
+    const authUser = authenticate(req);
+    if (!authUser) {
+      return sendJson(res, 401, { error: 'Unauthorized: missing or invalid Bearer token', status: 401 });
+    }
+    const userId = parseInt(adminRoleMatch[1], 10);
+    const userProfile = users[userId];
+    if (!userProfile) {
+      return sendJson(res, 404, { error: `User ${userId} not found`, status: 404 });
+    }
+    const body = await parseRequestBody(req);
+    if (body.role) {
+      userProfile.role = String(body.role);
+    }
+    return sendJson(res, 200, { success: true, user: userProfile, message: 'Role updated successfully' });
   }
 
   // GET /me/orders (SECURE PATTERN: Enforces ownership through token identity)

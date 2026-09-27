@@ -12,3 +12,83 @@ export interface ImpactAnalysis { directlyExposed: string[]; indirectlyReachable
 export interface Finding { id: string; scanId: string; vulnerabilityType: string; title: string; severity: 'critical' | 'high' | 'medium' | 'low' | 'info'; confidence: number; endpoint: string; method: string; attackerIdentity: string; victimIdentity?: string; affectedObject?: string; evidenceIds: string[]; attackPathId?: string; impact: ImpactAnalysis; remediation: string; poc: string; createdAt: string; evidence: Evidence }
 export interface ScanRecord { id: string; targetId: string; status: ScanStatus; progress: number; currentStep: string; error?: string; warnings?: string[]; createdAt: string; completedAt?: string; findings?: Finding[]; attackPaths?: AttackPath[]; graph?: { nodes: GraphNode[]; edges: GraphEdge[] }; resources?: Resource[]; relationships?: Relationship[]; endpoints?: Endpoint[]; testedEndpointIds?: string[]; report?: Record<string, unknown> }
 export interface Target { id: string; name: string; baseUrl: string; openApiUrl: string; sandboxMode: boolean; demoSandbox: boolean; authorized: boolean; allowDestructiveTests: boolean; loginPath: string; tokenJsonPath: string; tokenPrefix: string; identities: Identity[]; openApiDocument?: Record<string, unknown>; createdAt: string }
+
+// === 24-HOUR SECURITY SYNC TYPES ===
+export type SyncStatus = 'RUNNING' | 'COMPLETED' | 'FAILED' | 'BLOCKED';
+export type FindingStatus = 'NEW' | 'RESOLVED' | 'UNCHANGED' | 'REGRESSED';
+
+export interface NormalizedEndpoint {
+  id: string;  // e.g. 'GET /orders/{id}'
+  method: string;
+  path: string;
+  authRequired: boolean;
+  parameterNames: string[];
+  requestBodySchema?: string;
+  responseSchema?: string;
+  securitySchemes: string[];
+}
+
+export interface ApiSnapshot {
+  id: string;
+  targetId: string;
+  createdAt: string;
+  specHash: string;
+  endpoints: NormalizedEndpoint[];
+}
+
+export interface EndpointDiff {
+  added: NormalizedEndpoint[];
+  removed: NormalizedEndpoint[];
+  modified: Array<{ previous: NormalizedEndpoint; current: NormalizedEndpoint; reason: string }>;
+  unchanged: NormalizedEndpoint[];
+}
+
+export interface FindingComparison {
+  fingerprint: string;
+  findingId: string;
+  status: FindingStatus;
+  previousFindingId?: string;
+  title: string;
+  severity: string;
+  vulnerabilityType: string;
+}
+
+export interface DriftEvent {
+  endpoint: string;
+  previousBehavior: string;
+  currentBehavior: string;
+  driftType: 'AUTHORIZATION' | 'DATA_EXPOSURE' | 'ENDPOINT_REMOVED' | 'ENDPOINT_ADDED';
+  evidence?: string;
+}
+
+export interface SyncRecord {
+  id: string;
+  targetId: string;
+  startedAt: string;
+  completedAt?: string;
+  status: SyncStatus;
+  previousSnapshotId?: string;
+  currentSnapshotId?: string;
+  previousScanId?: string;
+  currentScanId?: string;
+  endpointDiff?: EndpointDiff;
+  findingComparisons?: FindingComparison[];
+  driftEvents?: DriftEvent[];
+  newFindingCount: number;
+  resolvedFindingCount: number;
+  unchangedFindingCount: number;
+  regressedFindingCount: number;
+  driftDetected: boolean;
+  error?: string;
+}
+
+export interface MonitoringConfig {
+  targetId: string;
+  enabled: boolean;
+  syncIntervalHours: number;
+  lastSyncAt?: string;
+  nextSyncAt?: string;
+  baselineScanId?: string;
+  baselineSnapshotId?: string;
+  updatedAt: string;
+}
